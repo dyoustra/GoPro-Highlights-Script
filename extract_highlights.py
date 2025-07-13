@@ -132,6 +132,11 @@ class GoProHiLightExtractor:
                     break
                 length = extended_size_struct.unpack(extended_data)[0]
             
+            # Validate box length to prevent infinite loops
+            if length <= 0 or length < 8:
+                logger.warning(f"Invalid box length {length} at offset {offset}")
+                break
+            
             # Store box location
             boxes[box_type] = (offset, offset + length)
             
@@ -304,7 +309,7 @@ class GoProHiLightExtractor:
                 elif b'HMMT' in udta_boxes:
                     logger.debug(f"Found HMMT section in {video_path}")
                     hmmt_start, hmmt_end = udta_boxes[b'HMMT']
-                    highlights = self.parse_hilight_tags_old_format(f, hmmt_start + 12, hmmt_end)
+                    highlights = self.parse_hilight_tags_old_format(f, hmmt_start + 8, hmmt_end)
                 
                 else:
                     logger.debug(f"No GoPro metadata sections found in {video_path}")

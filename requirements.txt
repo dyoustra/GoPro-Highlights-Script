@@ -25,4 +25,8 @@
 #
 # On macOS: brew install ffmpeg
 # On Ubuntu/Debian: sudo apt-get install ffmpeg
-# On Windows: Download from https://ffmpeg.org/download.html 
+# On Windows: Download from https://ffmpeg.org/download.html
+
+# Development dependencies for testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0 
