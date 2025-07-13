@@ -1,0 +1,28 @@
+# Core dependencies for GoPro highlight extraction
+# Note: This script also requires ffmpeg and ffprobe to be installed on your system
+
+# No additional Python packages are required beyond the standard library
+# The script uses only built-in modules:
+# - asyncio (async/await support)
+# - argparse (command-line argument parsing)
+# - logging (logging functionality)
+# - os (operating system interface)
+# - re (regular expressions)
+# - struct (binary data parsing for MP4 boxes)
+# - subprocess (running external commands like ffmpeg)
+# - sys (system-specific parameters)
+# - tempfile (temporary file/directory creation)
+# - pathlib (modern path handling)
+# - typing (type hints)
+# - json (JSON handling - unused but imported)
+# - dataclasses (data class decorator)
+# - concurrent.futures (thread pool executor)
+# - time (time-related functions)
+
+# External system dependencies (must be installed separately):
+# - ffmpeg (video processing)
+# - ffprobe (video metadata extraction)
+#
+# On macOS: brew install ffmpeg
+# On Ubuntu/Debian: sudo apt-get install ffmpeg
+# On Windows: Download from https://ffmpeg.org/download.html 
