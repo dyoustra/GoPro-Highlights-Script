@@ -6,7 +6,7 @@ import pytest
 import os
 from unittest.mock import patch, MagicMock
 
-from extract_highlights import Config, get_optimal_workers
+from config import Config, get_optimal_workers
 
 
 class TestGetOptimalWorkers:
@@ -109,7 +109,7 @@ class TestConfig:
     def test_config_post_init_max_workers(self):
         """Test that max_workers is set correctly in __post_init__."""
         # Test with None (should use get_optimal_workers)
-        with patch('extract_highlights.get_optimal_workers', return_value=6):
+        with patch('config.get_optimal_workers', return_value=6):
             config = Config(max_workers=None)
             assert config.max_workers == 6
         

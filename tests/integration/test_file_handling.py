@@ -18,9 +18,10 @@ import subprocess
 import shutil
 import concurrent.futures
 
-from extract_highlights import (
-    VideoProcessor, GoProHiLightExtractor, Config, main
-)
+from config import Config
+from video_processor import VideoProcessor
+from gopro_hilight_extractor import GoProHiLightExtractor
+from extract_highlights import main
 
 
 class TestFileSystemOperations:
@@ -209,17 +210,18 @@ class TestVideoFileHandling:
             with patch.object(processor, 'extract_clip', side_effect=mock_extract_clip):
                 for video_file in video_files:
                     clips_extracted = await processor.process_video(video_file, output_dir)
-                    assert clips_extracted == 2  # 2 clips per video
+                    assert clips_extracted == (2, 0)  # 2 hilight clips, 0 motion clips per video
         
         # Verify output files were created
         assert len(created_files) == 6  # 3 videos * 2 clips each
         
-        # Verify file naming convention
+        # Verify file naming convention (files are created in HiLights subdirectory)
+        hilight_dir = output_dir / "HiLights"
         for i, video_file in enumerate(video_files):
             base_name = video_file.stem
             expected_files = [
-                output_dir / f"{base_name}_highlight_001.mp4",
-                output_dir / f"{base_name}_highlight_002.mp4"
+                hilight_dir / f"{base_name}_highlight_001.mp4",
+                hilight_dir / f"{base_name}_highlight_002.mp4"
             ]
             
             for expected_file in expected_files:
@@ -398,8 +400,8 @@ class TestConcurrentFileAccess:
                 
                 results = await asyncio.gather(*tasks)
                 
-                # All should have processed successfully
-                assert all(result == 2 for result in results)  # 2 clips per video
+                # All should have processed successfully - expecting (hilight_clips, motion_clips)
+                assert all(result == (2, 0) for result in results)  # 2 clips per video
 
 
 class TestFileSystemErrors:
@@ -439,7 +441,7 @@ class TestFileSystemErrors:
         
         # Should handle gracefully
         clips_extracted = await processor.process_video(non_existent_file, tmp_path / "output")
-        assert clips_extracted == 0
+        assert clips_extracted == (0, 0)
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -520,9 +522,11 @@ class TestFileSystemIntegrationWithMainFunction:
                     assert output_dir.exists()
                     assert output_dir.is_dir()
                     
-                    # Verify output files were created
-                    output_files = list(output_dir.glob("*.mp4"))
-                    assert len(output_files) == 4  # 2 videos * 2 clips each
+                    # Verify output files were created (check in subdirectories)
+                    hilight_files = list((output_dir / "HiLights").glob("*.mp4"))
+                    motion_files = list((output_dir / "Motion Detected Highlights").glob("*.mp4"))
+                    total_files = len(hilight_files) + len(motion_files)
+                    assert total_files == 4  # 2 videos * 2 clips each
     
     @pytest.mark.integration
     def test_file_extension_filtering(self, tmp_path):

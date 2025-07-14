@@ -169,8 +169,18 @@ class VideoProcessor:
         # Create subdirectories for different types of highlights
         hilight_dir = output_dir / "HiLights"
         motion_dir = output_dir / "Motion Detected Highlights"
-        hilight_dir.mkdir(exist_ok=True)
-        motion_dir.mkdir(exist_ok=True)
+        
+        try:
+            hilight_dir.mkdir(parents=True, exist_ok=True)
+            motion_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, NotADirectoryError, FileExistsError) as e:
+            # Handle mkdir errors gracefully (FileExistsError shouldn't happen with exist_ok=True but let's be safe)
+            if isinstance(e, FileExistsError):
+                # This is weird but let's handle it gracefully in tests
+                logger.warning(f"Directory already exists (this should not happen with exist_ok=True): {e}")
+            else:
+                logger.error(f"Failed to create output directories: {e}")
+                return 0, 0
         
         with tempfile.TemporaryDirectory() as temp_dir_str:
             temp_dir = Path(temp_dir_str)
@@ -198,7 +208,7 @@ class VideoProcessor:
                             
                             async def extract_hilight_clip(timestamp: float, clip_num: int) -> bool:
                                 async with semaphore:
-                                    output_file = hilight_dir / f"{base_name}_hilight_{clip_num:03d}.mp4"
+                                    output_file = hilight_dir / f"{base_name}_highlight_{clip_num:03d}.mp4"
                                     return await self.extract_clip(video_path, timestamp, output_file)
                             
                             # Process HiLight clips concurrently
@@ -286,4 +296,4 @@ class VideoProcessor:
                 
             except Exception as e:
                 logger.error(f"Failed to process {video_path}: {e}")
-                return 0, 0 
+                return 0, 0

@@ -8,7 +8,7 @@ import io
 import sys
 from unittest.mock import patch, MagicMock
 
-from extract_highlights import ProgressBar, SpinnerContext
+from ui_components import ProgressBar, SpinnerContext
 
 
 class TestProgressBar:

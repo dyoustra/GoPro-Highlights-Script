@@ -12,7 +12,7 @@ from unittest.mock import patch, mock_open
 import io
 
 # Import the classes we want to test
-from extract_highlights import GoProHiLightExtractor
+from gopro_hilight_extractor import GoProHiLightExtractor
 
 
 class TestMP4BoxParsing:

@@ -10,7 +10,9 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock, call
 import argparse
 
-from extract_highlights import main, Config, VideoProcessor, get_optimal_workers
+from config import Config, get_optimal_workers
+from video_processor import VideoProcessor
+from extract_highlights import main
 
 
 class TestMainFunction:
@@ -56,7 +58,7 @@ class TestMainFunction:
                 
                 # Mock VideoProcessor
                 mock_processor = MagicMock()
-                mock_processor.process_video = AsyncMock(return_value=2)
+                mock_processor.process_video = AsyncMock(return_value=(2, 0))
                 
                 with patch('extract_highlights.VideoProcessor', return_value=mock_processor):
                     await main()
@@ -165,7 +167,7 @@ class TestMainFunction:
                     nonlocal captured_config
                     captured_config = config
                     mock_processor = MagicMock()
-                    mock_processor.process_video = AsyncMock(return_value=1)
+                    mock_processor.process_video = AsyncMock(return_value=(1, 0))
                     return mock_processor
                 
                 with patch('extract_highlights.VideoProcessor', side_effect=mock_processor_init):
@@ -212,7 +214,7 @@ class TestMainFunction:
                 
                 with patch('extract_highlights.VideoProcessor') as mock_processor_class:
                     mock_processor = MagicMock()
-                    mock_processor.process_video = AsyncMock(return_value=1)
+                    mock_processor.process_video = AsyncMock(return_value=(1, 0))
                     mock_processor_class.return_value = mock_processor
                     
                     await main()
@@ -261,7 +263,7 @@ class TestMainFunction:
                 
                 with patch('extract_highlights.VideoProcessor') as mock_processor_class:
                     mock_processor = MagicMock()
-                    mock_processor.process_video = AsyncMock(return_value=1)
+                    mock_processor.process_video = AsyncMock(return_value=(1, 0))
                     mock_processor_class.return_value = mock_processor
                     
                     await main()
@@ -307,7 +309,7 @@ class TestMainFunction:
                     nonlocal captured_config
                     captured_config = config
                     mock_processor = MagicMock()
-                    mock_processor.process_video = AsyncMock(return_value=1)
+                    mock_processor.process_video = AsyncMock(return_value=(1, 0))
                     return mock_processor
                 
                 with patch('extract_highlights.VideoProcessor', side_effect=mock_processor_init):
@@ -456,7 +458,7 @@ class TestMainIntegration:
                 
                 with patch('extract_highlights.VideoProcessor') as mock_processor_class:
                     mock_processor = MagicMock()
-                    mock_processor.process_video = AsyncMock(return_value=2)
+                    mock_processor.process_video = AsyncMock(return_value=(2, 0))
                     mock_processor_class.return_value = mock_processor
                     
                     # Capture print output
@@ -509,7 +511,7 @@ class TestMainIntegration:
                     
                     async def mock_process_video(video_path, output_dir):
                         call_order.append(video_path.name)
-                        return 1
+                        return (1, 0)
                     
                     mock_processor.process_video = mock_process_video
                     mock_processor_class.return_value = mock_processor

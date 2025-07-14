@@ -14,10 +14,11 @@ from unittest.mock import patch, AsyncMock, MagicMock
 import struct
 import logging
 
-from extract_highlights import (
-    main, VideoProcessor, GoProHiLightExtractor, Config,
-    ProgressBar, SpinnerContext
-)
+from config import Config
+from video_processor import VideoProcessor
+from gopro_hilight_extractor import GoProHiLightExtractor
+from ui_components import ProgressBar, SpinnerContext
+from extract_highlights import main
 
 
 class TestFullPipelineIntegration:
@@ -75,7 +76,7 @@ class TestFullPipelineIntegration:
                     clips_extracted = await processor.process_video(video_file, output_dir)
                     
                     # Verify results
-                    assert clips_extracted == 3
+                    assert clips_extracted == (3, 0)  # 3 hilight clips, 0 motion clips
                     
                     # Verify HiLight extraction worked
                     extractor = GoProHiLightExtractor()
@@ -83,9 +84,9 @@ class TestFullPipelineIntegration:
                     expected_highlights = [5.0, 20.0, 40.0]  # Converted to seconds
                     assert highlights == expected_highlights
                     
-                    # Verify ffmpeg was called for each clip
+                    # Verify ffmpeg was called for each clip + scene detection
                     ffmpeg_calls = [call for call in mock_exec.call_args_list if call[0][0] == 'ffmpeg']
-                    assert len(ffmpeg_calls) == 3
+                    assert len(ffmpeg_calls) == 4  # 3 clips + 1 scene detection
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -149,7 +150,7 @@ class TestFullPipelineIntegration:
                             clips_extracted = await processor.process_video(video_file, output_dir)
                         
                         # Should have fallen back to motion analysis
-                        assert clips_extracted == 3
+                        assert clips_extracted == (0, 3)  # 0 hilight clips, 3 motion clips
                         
                         # Verify motion analysis was called
                         motion_calls = [call for call in mock_exec.call_args_list 
@@ -182,7 +183,7 @@ class TestFullPipelineIntegration:
             
             # Should handle error gracefully and return 0 clips
             clips_extracted = await processor.process_video(video_file, tmp_path / "output")
-            assert clips_extracted == 0
+            assert clips_extracted == (0, 0)
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -232,7 +233,7 @@ class TestFullPipelineIntegration:
                     # Should have filtered some timestamps due to min_gap_seconds=3
                     # Original: [3.0, 15.0, 30.0, 45.0] -> After filtering: [3.0, 15.0, 30.0, 45.0]
                     # (all are > 3 seconds apart, so all should be kept)
-                    assert clips_extracted == 4
+                    assert clips_extracted == (4, 0)  # 4 hilight clips, 0 motion clips
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -269,25 +270,27 @@ class TestFullPipelineIntegration:
             mock_process.returncode = 0
             mock_exec.return_value = mock_process
             
-            with patch('pathlib.Path.exists', return_value=True):
-                with patch('pathlib.Path.stat') as mock_stat:
-                    mock_stat.return_value.st_size = 2000
-                    
-                    # Process all videos
-                    results = []
-                    for video_file in video_files:
-                        result = await processor.process_video(video_file, tmp_path / "output")
-                        results.append(result)
-                    
-                    # All should have processed successfully
-                    assert all(result == 2 for result in results)
-                    
-                    # Verify each video was processed with its own HiLight tags
-                    for i, video_file in enumerate(video_files):
-                        extractor = GoProHiLightExtractor()
-                        highlights = await extractor.extract_hilight_tags(video_file)
-                        expected = [(i * 30 + 5), (i * 30 + 20)]  # Converted to seconds
-                        assert highlights == expected
+            with patch('pathlib.Path.stat') as mock_stat:
+                mock_stat_result = MagicMock()
+                mock_stat_result.st_size = 2000
+                mock_stat_result.st_mode = 0o755  # Regular file mode
+                mock_stat.return_value = mock_stat_result
+                
+                # Process all videos
+                results = []
+                for video_file in video_files:
+                    result = await processor.process_video(video_file, tmp_path / "output")
+                    results.append(result)
+                
+                # All should have processed successfully - expecting (hilight_clips, motion_clips)
+                assert all(result == (2, 0) for result in results)
+                
+                # Verify each video was processed with its own HiLight tags
+                for i, video_file in enumerate(video_files):
+                    extractor = GoProHiLightExtractor()
+                    highlights = await extractor.extract_hilight_tags(video_file)
+                    expected = [(i * 30 + 5), (i * 30 + 20)]  # Converted to seconds
+                    assert highlights == expected
 
 
 class TestProgressIndicatorIntegration:
@@ -369,7 +372,7 @@ class TestErrorHandlingIntegration:
         
         # Should handle gracefully without crashing
         clips_extracted = await processor.process_video(corrupted_file, tmp_path / "output")
-        assert clips_extracted == 0
+        assert clips_extracted == (0, 0)
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -389,7 +392,7 @@ class TestErrorHandlingIntegration:
         # Mock ffmpeg not found
         with patch('asyncio.create_subprocess_exec', side_effect=FileNotFoundError("ffmpeg not found")):
             clips_extracted = await processor.process_video(video_file, tmp_path / "output")
-            assert clips_extracted == 0
+            assert clips_extracted == (0, 0)
     
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -425,7 +428,7 @@ class TestErrorHandlingIntegration:
             mock_exec.side_effect = mock_subprocess
             
             clips_extracted = await processor.process_video(video_file, tmp_path / "output")
-            assert clips_extracted == 0
+            assert clips_extracted == (0, 0)
 
 
 class TestLoggingIntegration:

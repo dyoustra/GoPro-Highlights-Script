@@ -10,7 +10,9 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock, call
 import subprocess
 
-from extract_highlights import VideoProcessor, Config, GoProHiLightExtractor
+from config import Config
+from video_processor import VideoProcessor
+from gopro_hilight_extractor import GoProHiLightExtractor
 
 
 class TestVideoProcessor:
@@ -455,7 +457,7 @@ class TestProcessVideo:
                 with patch.object(processor, 'extract_clip', return_value=True):
                     result = await processor.process_video(video_path, output_dir)
                     
-                    assert result == 3  # 3 successful clips
+                    assert result == (3, 0)  # 3 hilight clips, 0 motion clips
     
     @pytest.mark.asyncio
     async def test_process_video_fallback_to_motion_analysis(self):
@@ -479,7 +481,7 @@ class TestProcessVideo:
                     with patch.object(processor, 'extract_clip', return_value=True):
                         result = await processor.process_video(video_path, output_dir)
                         
-                        assert result == 2  # 2 successful clips from motion analysis
+                        assert result == (0, 2)  # 0 hilight clips, 2 motion clips
     
     @pytest.mark.asyncio
     async def test_process_video_no_highlights_found(self):
@@ -500,7 +502,7 @@ class TestProcessVideo:
                                  return_value=[]):
                     result = await processor.process_video(video_path, output_dir)
                     
-                    assert result == 0  # No clips extracted
+                    assert result == (0, 0)  # No clips extracted
     
     @pytest.mark.asyncio
     async def test_process_video_with_timestamp_filtering(self):
@@ -522,7 +524,7 @@ class TestProcessVideo:
                     result = await processor.process_video(video_path, output_dir)
                     
                     # Should filter to [10.0, 25.0, 40.0] = 3 clips
-                    assert result == 3
+                    assert result == (3, 0)  # 3 hilight clips, 0 motion clips
     
     @pytest.mark.asyncio
     async def test_process_video_partial_clip_extraction_failure(self):
@@ -544,7 +546,7 @@ class TestProcessVideo:
                                  side_effect=[True, False, True]):
                     result = await processor.process_video(video_path, output_dir)
                     
-                    assert result == 2  # 2 successful clips out of 3
+                    assert result == (2, 0)  # 2 hilight clips out of 3, 0 motion clips
     
     @pytest.mark.asyncio
     async def test_process_video_exception_handling(self):
@@ -563,7 +565,7 @@ class TestProcessVideo:
                              side_effect=Exception("Test exception")):
                 result = await processor.process_video(video_path, output_dir)
                 
-                assert result == 0  # Should handle gracefully and return 0
+                assert result == (0, 0)  # Should handle gracefully and return (0, 0)
     
     @pytest.mark.asyncio
     async def test_process_video_hilight_tags_disabled(self):
@@ -583,7 +585,7 @@ class TestProcessVideo:
                 with patch.object(processor, 'extract_clip', return_value=True):
                     result = await processor.process_video(video_path, output_dir)
                     
-                    assert result == 2
+                    assert result == (0, 2)  # 0 hilight clips, 2 motion clips
                     
                     # Should not have called HiLight extraction
                     # (We can't easily verify this without more complex mocking)
